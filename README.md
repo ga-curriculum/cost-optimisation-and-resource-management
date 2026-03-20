@@ -1,66 +1,111 @@
-# COST OPTIMISATION AND RESOURCE MANAGEMENT
+# Cost Optimisation and Resource Management
 
 **Session Time:** 120 minutes
 
 ---
 
 ## Table of Contents
-1. Identifying Cost Drivers in AI Infrastructure Management
-2. Applying Monitoring and Automation Techniques to Reduce Spend
+1.  Identifying Cost Drivers in AI Infrastructure Management
+2. Applying Monitoring and Automation Techniques
 3. Evaluating the Balance Between Performance, Scalability, and Cost Efficiency
 4. Lab: Workflow Automation Lab
 5. Wrap-Up and Reflection
 
 ---
 
-## Module Overview
-Analyse how to optimise resource allocation and cloud costs without sacrificing performance. Learn to monitor usage patterns and apply automation for efficiency.
+## Learning Objectives
 
-## Session Breakdown
+By the end of this module, participants will be able to:
 
-| Segment | Topic                                          | Duration (minutes) |
-|---------|------------------------------------------------|--------------------|
-| 1       | Identifying AI Cost Drivers                    | 20                 |
-| 2       | Monitoring and Automating Resource Usage       | 20                 |
-| 3       | Trade-offs: Cost, Scalability, and Performance | 20                 |
-| 4       | Lab: Workflow Automation Lab                   | 60                 |
+1. Identify cost drivers in AI infrastructure management.
+2. Apply monitoring and automation techniques to reduce unnecessary spend.
+3. Evaluate the balance between performance, scalability, and cost efficiency.
 
 ---
 
-## 1. Identifying Cost Drivers in AI Infrastructure Management
+## Session Breakdown
 
-Before you can reduce spending, you must identify where the budget is going. AI workloads have unique resource profiles compared to traditional software, primarily due to the massive scale of data and specialized hardware required.
+| Segment | Topic                                                             | Duration (minutes) |
+|---------|-------------------------------------------------------------------|--------------------|
+| 1       | Identifying Cost Drivers in AI Infrastructure Management          | 20                 |
+| 2       | Applying Monitoring and Automation Techniques                     | 20                 |
+| 3       | Evaluating the Balance Between Performance, Scalability, and Cost | 20                 |
+| 4       | Lab: Workflow Automation Lab                                      | 60                 |
 
-### Key Cost Drivers in AI:
-* **Compute (GPUs/TPUs):** 
+---
+
+## 1.  Identifying Cost Drivers in AI Infrastructure Management
+
+To effectively optimise resource allocation and cloud costs without sacrificing performance, you must first understand where the budget is going. AI systems typically incur costs that are vastly different from traditional web applications. 
+
+### Core Cost Drivers in AI
+* **Idle Compute (GPUs/TPUs):** 
   
-  The most significant expense. Idle GPUs waiting for data or running unoptimized batches drain budgets rapidly.
+  AI accelerators are expensive. Leaving a GPU instance running 24/7 when inferences only happen during business hours is a primary source of wasted budget.
+
+* **Data Egress and Transfer:**
   
-* **Storage:** 
+  Moving large datasets across cloud regions or extracting them for local analysis incurs heavy networking fees.
+
+* **Over-provisioning:** 
   
-  Storing terabytes of training data and managing multiple versions of large model weights (e.g., 40GB+ per LLM).
-
-* **Network Egress:** 
-  
-  Moving massive datasets between cloud providers or out to edge devices.
+  Requesting massive memory or CPU allocations for a container "just in case" rather than profiling the actual resource needs.
 
 
 
-### Tools Used: Minikube
-We use **Minikube** to simulate a cloud environment locally. By defining strict resource limits (CPU/Memory) on our local Minikube pods, we can identify the absolute minimum resources an AI model needs to run before it crashes, helping us avoid over-provisioning expensive cloud instances.
+### Tools Used: Python
+You can use Python to profile your AI application's actual resource consumption locally. By logging memory and CPU usage during a model's inference cycle, you can identify if your cloud instances are over-provisioned.
 
 ### Practical Example
-If an AI text-to-speech model only requires 2GB of RAM and 1 CPU core to achieve acceptable latency, but is deployed on a cloud instance with 16GB of RAM and 8 cores, you are paying for 14GB of wasted memory. Using Minikube, you can benchmark the model locally to find these exact boundaries before spending cloud credits.
+Before deploying to the cloud, you can run a simple Python script using the `psutil` library to benchmark the memory footprint of loading your AI model. If the script shows the model only consumes 4GB of RAM, you know that provisioning a 16GB instance is a major, unnecessary cost driver.
+
+```python
+import psutil
+import time
+
+def profile_model_loading():
+    print(f"Baseline RAM: {psutil.virtual_memory().used / (1024**3):.2f} GB")
+    
+    # Simulate loading a large AI model
+    print("Loading AI Model into memory...")
+    dummy_model_weights = bytearray(4 * 1024 * 1024 * 1024) # 4GB
+    time.sleep(2)
+    
+    peak_ram = psutil.virtual_memory().used / (1024**3)
+    print(f"Peak RAM after load: {peak_ram:.2f} GB")
+    print("Action: Do not provision instances larger than necessary for this footprint.")
+
+profile_model_loading()
+```
+<br/><br/>
 
 ```mermaid
-pie title Monthly AI Infrastructure Spend Example
-    "GPU Compute (Active)" : 55
-    "GPU Compute (Idle/Wasted)" : 20
-    "Storage (Data & Weights)" : 15
-    "Network Data Transfer" : 10
+graph TD
+    A[Total AI Infrastructure Cost] --> B(Compute Costs)
+    A --> C(Storage & Data Costs)
+    A --> D(Operational Costs)
+    
+    B --> B1[Idle GPU Time]
+    B --> B2[Over-provisioned RAM/CPU]
+    
+    C --> C1[Data Egress Fees]
+    C --> C2[Redundant Vector DBs]
+    
+    style B1 fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+    style B2 fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+    style C1 fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
 ```
 
-### Tools Used: Apache Airflow
+---
+
+## 2. Applying Monitoring and Automation Techniques
+
+Once you identify the cost drivers, you must apply monitoring and automation techniques to reduce unnecessary spend. Automation ensures that infrastructure is treated ephemerally—it exists only when work needs to be done.
+
+### Concepts: Event-Driven Automation
+Instead of keeping a server running continuously to wait for a daily batch of data, an event-driven workflow spins up the resources, executes the AI model training or batch inference, and immediately tears the resources down. 
+
+### What is Apache Airflow?
 
 **Apache Airflow** is an open-source platform used to programmatically author, schedule, and monitor workflows. Instead of manually running scripts or relying on basic cron jobs, Airflow allows you to define complex data pipelines as code (specifically, using Python). 
 
@@ -73,13 +118,16 @@ In Airflow, a workflow is defined as a **DAG** (Directed Acyclic Graph).
   
   The tasks flow in a specific direction (e.g., Task A must happen before Task B).
 
-* **Acyclic:**
+* **Acyclic:** 
   
   The workflow does not loop back on itself; it has a clear start and end.
+
 * **Graph:** 
   
   A visual representation of the tasks and their dependencies.
 
+
+---
 
 ### Visualizing an Airflow DAG
 
@@ -118,142 +166,120 @@ graph LR
 ```
 
 #### How it Works:
-1. **Dependencies:** The `Train AI Model` task cannot start until the `Data Quality Check` successfully passes. If the data check fails, the graph branches off to alert the team instead.
-2. **Resilience:** If the `Clean & Preprocess Data` task fails due to a temporary network glitch, Airflow can be configured to automatically retry that specific task without having to restart the entire workflow from the beginning.
-3. **Observability:** Airflow provides a web interface where you can visually track the progress of this DAG, seeing exactly which tasks succeeded (usually highlighted in green) and which failed (highlighted in red).
+1. **Dependencies:** 
+   
+   The `Train AI Model` task cannot start until the `Data Quality Check` successfully passes. If the data check fails, the graph branches off to alert the team instead.
 
-### Example of Airflow DAG in Python
+2. **Resilience:** 
+   
+   If the `Clean & Preprocess Data` task fails due to a temporary network glitch, Airflow can be configured to automatically retry that specific task without having to restart the entire workflow from the beginning.
 
-One of the best features of Apache Airflow is that workflows are configured entirely in Python. This means your data pipelines can be version-controlled, tested, and reviewed just like any other software code.
+3. **Observability:** 
+   
+   Airflow provides a web interface where you can visually track the progress of this DAG, seeing exactly which tasks succeeded (usually highlighted in green) and which failed (highlighted in red).
 
-> When you are first building a lightweight workflow to manage your data pipelines efficiently, you only really need three core ingredients: the **DAG** (the container), the **Tasks** (the actual work), and the **Dependencies** (the order they run in).
+
+### Tools Used: Apache Airflow (local) and Python
+**Apache Airflow** allows you to build lightweight, event-driven workflows. You define the pipeline as a Directed Acyclic Graph (DAG) using **Python**, ensuring that tasks run in the correct order and compute resources are released the second the job is finished.
+
+### Practical Example
+Here is how you use Airflow to automate a cost-saving lifecycle. This Python DAG ensures a costly GPU instance is only active for the exact duration of the training job.
 
 ```python
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from datetime import datetime
 
-# 1. The Container: Create the DAG and tell it when to run
-with DAG(
-    dag_id='simple_ai_pipeline',
-    start_date=datetime(2024, 1, 1),
-    schedule_interval='@daily'
-) as dag:
-
-    # 2. The Tasks: Define what actually needs to happen
-    get_data = BashOperator(
-        task_id='download_data',
-        bash_command='echo "Downloading training data..."'
+with DAG('cost_optimised_ai_training', start_date=datetime(2024, 1, 1), schedule_interval='@daily') as dag:
+    
+    # Step 1: Spin up the expensive GPU instance
+    start_gpu = BashOperator(
+        task_id='provision_gpu_instance',
+        bash_command='echo "Provisioning AWS EC2 p3.2xlarge..."'
     )
-
+    
+    # Step 2: Run the training script
     train_model = BashOperator(
-        task_id='train_model',
-        bash_command='echo "Training the AI model..."'
+        task_id='run_model_training',
+        bash_command='python /scripts/train.py'
     )
-
-    # 3. The Order: Use the >> symbol to draw the arrow
-    get_data >> train_model
+    
+    # Step 3: Crucial Cost Saving - Terminate the instance immediately
+    terminate_gpu = BashOperator(
+        task_id='terminate_gpu_instance',
+        bash_command='echo "Terminating instance to stop billing."',
+        trigger_rule='all_done' # Runs even if training fails, preventing infinite billing
+    )
+    
+    start_gpu >> train_model >> terminate_gpu
 ```
-
-### Concepts Explained:
-* **Simple Commands:** Instead of triggering complex Python scripts, this uses basic `echo` commands in a `BashOperator` so you can test it immediately on your local machine and watch the logs output the text.
-* **Clear Flow:** `get_data >> train_model` is the exact equivalent of drawing a literal arrow from the first step to the second. The AI model will never attempt to train until the data is successfully downloaded.
-
----
-
-## 2. Applying Monitoring and Automation Techniques to Reduce Spend
-
-Once cost drivers are identified, manual intervention is not enough. You must apply monitoring and automation techniques to reduce unnecessary spend. This involves configuring systems to scale down (or off completely) when demand is low.
-
-### The Spot Instance Strategy
-One of the most effective ways to reduce AI compute costs by up to 80% is using **Spot Instances** (spare cloud capacity sold at a discount). However, the cloud provider can terminate these instances with almost no warning. Your system must be automated to handle these sudden losses gracefully.
-
-### Tools Used: Chaos Mesh (local)
-**Chaos Mesh** is a cloud-native Chaos Engineering platform. We use it to purposefully inject failures into our system to ensure our automation works. If we want to use cheap Spot Instances, we must prove our cluster can survive sudden node terminations.
-
-### Practical Example
-You configure your AI API to run on a cluster of cheap, preemptible nodes. You use Chaos Mesh to run a "PodKill" experiment, randomly destroying AI worker pods every 5 minutes. 
-
-```yaml
-# chaos-mesh-podkill.yaml
-apiVersion: chaos-mesh.org/v1alpha1
-kind: PodChaos
-metadata:
-  name: simulate-spot-instance-termination
-spec:
-  action: pod-kill
-  mode: one
-  selector:
-    labelSelectors:
-      app: ai-inference-worker
-  scheduler:
-    cron: "@every 5m"
-```
-
-If your Kubernetes automation successfully detects the dead pods and spins up replacements on new cheap nodes without dropping user requests, you have successfully validated a highly cost-optimized architecture.
+<br/><br/>
 
 ```mermaid
-sequenceDiagram
-    participant Traffic as User Requests
-    participant Cluster as Kubernetes Cluster
-    participant Chaos as Chaos Mesh
+graph LR
+    A((Start<br/>Midnight)) -->|API Call| B[Provision GPU<br/>Instance]
+    B --> C{GPU Ready?}
+    C -->|Yes| D[Execute Python<br/>Training Script]
+    D -->|Success or Fail| E[Terminate GPU<br/>Instance]
+    E --> F((End Job))
     
-    Traffic->>Cluster: Sending 100 req/sec
-    Chaos->>Cluster: Inject PodKill (Simulate Spot Death)
-    Note over Cluster: Node 2 Terminated
-    Cluster-->>Traffic: Brief latency spike
-    Cluster->>Cluster: Automate replacement Pod on Node 3
-    Cluster-->>Traffic: Traffic normalizes
-    Note over Chaos,Cluster: Cost savings validated safely!
+    classDef cost_save fill:#d4edda,stroke:#28a745,stroke-width:2px;
+    class E cost_save;
 ```
 
 ---
 
 ## 3. Evaluating the Balance Between Performance, Scalability, and Cost Efficiency
 
-Optimization is always a compromise. You must evaluate the balance between performance, scalability, and cost efficiency. Reducing costs too much leads to unacceptable latency, which drives users away.
+The role of an AI Systems Engineer is to constantly evaluate the balance between performance, scalability, and cost efficiency. Pushing too hard for cost savings can ruin the user experience (e.g., waiting 5 minutes for a cold-started model to reply), while maximizing performance will quickly deplete the operational budget.
 
-### The Optimization Triangle
-1. **Performance:** 
-   
-   How fast the AI generates a response.
+### Concepts: The Trade-Off Triangle
+* **Cost vs. Performance:** Opting to use a quantized, smaller AI model instead of a massive one. It is cheaper and faster, but slightly less accurate.
+* **Cost vs. Scalability:** Deciding whether to use Spot Instances (highly discounted but can be interrupted at any time) versus On-Demand instances (expensive but reliable).
 
-2. **Cost Efficiency:** 
-   
-   How cheaply the response is generated.
-
-3. **Scalability:** 
-   
-   How well the system handles 10x the traffic.
-
-```mermaid
-graph LR
-    A[Performance] <--> B[Cost Efficiency]
-    B <--> C[Scalability]
-    A <--> C
-```
-
-### Tools Used: Chaos Mesh & Minikube combined
-You can use Minikube to limit the resources of a pod (Cost Efficiency) and use Chaos Mesh to inject Network Delay (Performance impact). This helps you answer the question: *"If we use a cheaper, slower storage tier, how badly does it affect the user experience?"*
+### Tools Used: Python (Data Analysis)
+You can use Python to simulate and evaluate these trade-offs mathematically before committing to an architectural decision. 
 
 ### Practical Example
-You are deciding whether to store your AI model weights on expensive, ultra-fast SSDs or cheaper standard HDDs. 
-You use Chaos Mesh to inject a 200ms network latency to simulate the slower HDD read speeds. 
-You observe that the AI model's total response time goes from 1.0s to 1.2s. You determine that a 1.2s response time is still perfectly acceptable for your users, allowing you to choose the cheaper storage option and save thousands of dollars a month without sacrificing meaningful performance.
+If you are deciding between keeping 5 servers running 24/7 (high performance/high cost) versus an Airflow-managed auto-scaling approach (balanced), you can write a Python calculation to evaluate the financial impact.
+
+```mermaid
+graph TD
+    subgraph High Performance - Costly
+        A1[Always-On GPUs] --> B1(Zero Cold Starts)
+        B1 --> C1($$$ Monthly)
+    end
+    
+    subgraph Balanced - Optimized
+        A2[Airflow Event-Driven] --> B2(Minor Latency on Startup)
+        B2 --> C2($ Monthly)
+    end
+    
+    subgraph Cheap - Risky
+        A3[Spot Instances Only] --> B3(Jobs Frequently Interrupted)
+        B3 --> C3(Pennies Monthly)
+    end
+```
 
 ---
 
 ## 4. Lab: Workflow Automation Lab
 
-**Objective:** Build a lightweight, event-driven workflow using Apache Airflow. This lab reinforces automation principles for managing data pipelines efficiently, ensuring compute resources are only utilized when data is actively ready to be processed.
+**Objective:** Build a lightweight, event-driven workflow using Apache Airflow. This lab reinforces automation principles for managing data pipelines efficiently.
 
-*(Please refer to the lab platform for complete instructions, starter code, and access to the workflow environment).*
+*(Please refer to the lab platform for complete instructions, starter code, and access to the Apache Airflow environment).*
 
 ---
 
 ## 5. Wrap-Up and Reflection
 
 **Reflection Questions:**
-1. How does using Chaos Mesh to simulate node failure directly enable a team to comfortably use heavily discounted Spot Instances for AI workloads?
-2. If an AI system autoscales perfectly but takes 5 minutes to pull the 40GB model weights into memory on a new node, how does this impact the balance of cost and performance?
-3. What is the financial danger of relying solely on vertical scaling (buying bigger GPUs) instead of optimizing your model architecture?
+1. How does using Apache Airflow to create an event-driven data pipeline directly impact your monthly cloud infrastructure bill?
+2. When evaluating the balance between performance and cost efficiency, in what scenarios would it be unacceptable to use cheaper, interruptible Spot Instances for your AI workloads?
+
+## 6. Resources
+
+* **Workflow Automation:** [Apache Airflow Official Documentation](https://airflow.apache.org/docs/apache-airflow/stable/index.html) - A comprehensive guide to authoring, scheduling, and monitoring Python-based DAGs.
+* **Cloud Cost Management:** [FinOps Foundation](https://www.finops.org/introduction/what-is-finops/) - Frameworks and best practices for managing and optimizing cloud infrastructure costs.
+* **Local Profiling:** [psutil Documentation](https://psutil.readthedocs.io/en/latest/) - Learn how to use this cross-platform Python library to retrieve information on running processes and system utilization (CPU, memory, disks, network).
+* **AI Resource Efficiency:** [Architecting for Scale with AWS Machine Learning](https://aws.amazon.com/machine-learning/) - Industry standards on right-sizing instances and managing data pipelines efficiently.
