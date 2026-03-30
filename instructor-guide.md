@@ -1,7 +1,7 @@
 # Instructor Guide: Cost Optimisation and Resource Management
 
 ## Module Overview
-In this module, instructors will guide learners to analyse how to optimise resource allocation and cloud costs without sacrificing performance. The focus is on the financial realities of running AI at scale. Learners will learn to monitor usage patterns and apply automation for efficiency. 
+In this module, instructors will guide learners to analyse how to optimise resource allocation and cloud costs without sacrificing performance. The focus is on the financial realities of running AI at scale. Learners will learn to monitor usage patterns and apply automation for efficiency.
 
 ## Learning Objectives
 By the end of this session, learners will be able to:
@@ -11,39 +11,25 @@ By the end of this session, learners will be able to:
 
 ## Session Pacing Guide (120 Minutes total)
 
-| Duration   | Segment                          | Instructor Action                                                                                                                                                                     |
-|:-----------|:---------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **20 min** | **Identifying Cost Drivers**     | Discuss the hidden costs of AI: Idle GPUs, data egress fees, and over-provisioned memory. Draw the "FinOps Triangle" (Speed, Cost, Quality) on the board.                             |
-| **40 min** | **Automation & Trade-offs Demo** | Live demonstration: Show a simple Apache Airflow DAG triggering a batch inference job in Python. Discuss how scheduling jobs during off-peak hours reduces costs.                     |
-| **60 min** | **Lab: Workflow Automation Lab** | Facilitate the lab where learners build a lightweight, event-driven workflow using Apache Airflow. This lab reinforces automation principles for managing data pipelines efficiently. |
+| Duration   | Segment                          | Instructor Action                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|:-----------|:---------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **20 min** | **Identifying Cost Drivers**     | Discuss the hidden costs of AI: Idle GPUs, data egress fees, and over-provisioned memory. Draw the "FinOps Triangle" (Speed, Cost, Quality) on the board.                                                                                                                                                                                                                                                                                          |
+| **40 min** | **Automation & Trade-offs Demo** | Live demonstration: Show a simple Apache Airflow DAG triggering a batch inference job in Python. Discuss how scheduling jobs during off-peak hours reduces costs. Airflow must be running before the session starts; start the webserver and scheduler 10 minutes before the demo. Note that initial setup requires `pip install apache-airflow` (~5 minutes), running `airflow db migrate` (~1 minute), and creating an admin user (~30 seconds). |
+| **60 min** | **Lab: Workflow Automation Lab** | Facilitate the lab where learners build a lightweight, event-driven workflow using Apache Airflow. This lab reinforces automation principles for managing data pipelines efficiently.                                                                                                                                                                                                                                                              |
 
 ---
 
 ## Delivery Notes & Teaching Tips
 
 ### 1. The "Always On" Fallacy
-* **Simplifying Concepts:** 
+* **Simplifying Concepts:** Many engineers treat AI models like standard web servers, keeping them running 24/7. Explain that AI accelerators are too expensive for this. Introduce "Scale-to-Zero" and event-driven architectures where the infrastructure only spins up when a request is made or a batch job is scheduled.
   
-  Many engineers treat AI models like standard web servers, keeping them running 24/7. Explain that AI accelerators are too expensive for this. Introduce "Scale-to-Zero" and event-driven architectures where the infrastructure only spins up when a request is made or a batch job is scheduled.
-  
-* **Learner Context:** 
-  
-  Frame this module around ROI (Return on Investment). Show them that saving thousands of dollars a month on cloud bills makes them highly valuable to their business stakeholders.
+* **Learner Context:** Frame this module around ROI (Return on Investment). Show them that saving thousands of dollars a month on cloud bills makes them highly valuable to their business stakeholders.
 
-### 2. Visualizing Event-Driven Cost Savings
-Draw or display how an Apache Airflow DAG orchestrates ephemeral resources rather than long-running servers:
-
-```mermaid
-graph TD
-    A[Airflow Scheduler] -->|Trigger: Midnight| B(Spin up GPU Instance)
-    B --> C(Load Model & Process Batch Data)
-    C --> D(Save Results to Storage)
-    D -->|Success Hook| E(Terminate GPU Instance)
-    
-    style B fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
-    style C fill:#d4edda,stroke:#28a745,stroke-width:2px;
-    style E fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
-```
+### 2. Troubleshooting Airflow DAG Visibility
+Students are almost guaranteed to encounter issues with their DAGs not appearing in the Airflow UI during the lab. Provide this crucial troubleshooting tip upfront:
+* Instruct learners to run `python dags/my_dag.py` directly in the terminal to catch syntax errors.
+* Remind them to verify that the Airflow configuration is pointing to the correct DAGs folder path.
 
 ---
 
