@@ -244,9 +244,9 @@ graph TD
 
 > [!NOTE]
 >
-> [Lab: **Workflow Automation Lab**](https://git.generalassemb.ly/ai-systems-engineering-reliability/lab-14-workflow-automation-lab)
+> [Lab: **Workflow Automation Lab**](https://github.com/ga-curriculum/lab-14-workflow-automation-lab)
 > 
-> **Note**: Please refer to the dedicated [Lab Guide](https://git.generalassemb.ly/ai-systems-engineering-reliability/lab-14-workflow-automation-lab) for full instructions, architectural constraints, and deliverables.
+> **Note**: Please refer to the dedicated [Lab Guide](https://github.com/ga-curriculum/lab-14-workflow-automation-lab) for full instructions, architectural constraints, and deliverables.
 
 -----
 
